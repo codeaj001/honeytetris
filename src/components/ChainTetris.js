@@ -527,6 +527,27 @@ const ChainTetris = () => {
 
                     {/* Side Panel */}
                     <div className="space-y-6">
+                    
+                        {/* Next Piece */}
+                        <div className="bg-black/30 p-4 rounded-lg border border-blue-500/30">
+                            <h3 className="text-lg font-bold mb-3 text-blue-400">Next Piece</h3>
+                            <div className="flex justify-center">
+                                <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${nextPiece.shape[0].length}, 1fr)` }}>
+                                    {nextPiece.shape.map((row, rowIndex) =>
+                                        row.map((cell, colIndex) => (
+                                            <div
+                                                key={`${rowIndex}-${colIndex}`}
+                                                className="w-4 h-4 border border-gray-600"
+                                                style={{
+                                                    backgroundColor: cell ? nextPiece.color : 'transparent'
+                                                }}
+                                            />
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Game Stats */}
                         <div className="bg-black/30 p-4 rounded-lg border border-cyan-500/30">
                             <h3 className="text-lg font-bold mb-3 text-cyan-400">Game Stats</h3>
@@ -543,44 +564,6 @@ const ChainTetris = () => {
                                     <span>Level:</span>
                                     <span className="font-bold">{level}</span>
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* Player Traits (Honeycomb) */}
-                        <div className="bg-black/30 p-4 rounded-lg border border-purple-500/30">
-                            <h3 className="text-lg font-bold mb-3 text-purple-400 flex items-center gap-2">
-                                <Trophy size={20} />
-                                Player Traits
-                                {honeycombClient && <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">ON-CHAIN</span>}
-                            </h3>
-                            <div className="space-y-3">
-                                {Object.values(TRAITS).map(trait => {
-                                    const playerTrait = Array.isArray(playerTraits) 
-                                        ? playerTraits.find(t => t.id === trait.id)
-                                        : null;
-                                    
-                                    const level = playerTrait?.level || 1;
-                                    const xp = playerTrait?.xp || 0;
-                                    const progress = Math.min((xp % 100) / 100 * 100, 100);
-                                    
-                                    return (
-                                        <div key={trait.id}>
-                                            <div className="flex justify-between text-sm mb-1">
-                                                <span>{trait.name}</span>
-                                                <span>Lv.{level}</span>
-                                            </div>
-                                            <div className="w-full bg-gray-700 rounded-full h-2">
-                                                <div 
-                                                    className="bg-gradient-to-r from-purple-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
-                                                    style={{ width: `${progress}%` }}
-                                                />
-                                            </div>
-                                            <div className="text-xs text-gray-400 mt-1">
-                                                {trait.description}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
                             </div>
                         </div>
 
@@ -637,25 +620,44 @@ const ChainTetris = () => {
                             </div>
                         </div>
 
-                        {/* Next Piece */}
-                        <div className="bg-black/30 p-4 rounded-lg border border-blue-500/30">
-                            <h3 className="text-lg font-bold mb-3 text-blue-400">Next Piece</h3>
-                            <div className="flex justify-center">
-                                <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${nextPiece.shape[0].length}, 1fr)` }}>
-                                    {nextPiece.shape.map((row, rowIndex) =>
-                                        row.map((cell, colIndex) => (
-                                            <div
-                                                key={`${rowIndex}-${colIndex}`}
-                                                className="w-4 h-4 border border-gray-600"
-                                                style={{
-                                                    backgroundColor: cell ? nextPiece.color : 'transparent'
-                                                }}
-                                            />
-                                        ))
-                                    )}
-                                </div>
+                        {/* Player Traits (Honeycomb) */}
+                        <div className="bg-black/30 p-4 rounded-lg border border-purple-500/30">
+                            <h3 className="text-lg font-bold mb-3 text-purple-400 flex items-center gap-2">
+                                <Trophy size={20} />
+                                Player Traits
+                                {honeycombClient && <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">ON-CHAIN</span>}
+                            </h3>
+                            <div className="space-y-3">
+                                {Object.values(TRAITS).map(trait => {
+                                    const playerTrait = Array.isArray(playerTraits) 
+                                        ? playerTraits.find(t => t.id === trait.id)
+                                        : null;
+                                    
+                                    const level = playerTrait?.level || 1;
+                                    const xp = playerTrait?.xp || 0;
+                                    const progress = Math.min((xp % 100) / 100 * 100, 100);
+                                    
+                                    return (
+                                        <div key={trait.id}>
+                                            <div className="flex justify-between text-sm mb-1">
+                                                <span>{trait.name}</span>
+                                                <span>Lv.{level}</span>
+                                            </div>
+                                            <div className="w-full bg-gray-700 rounded-full h-2">
+                                                <div 
+                                                    className="bg-gradient-to-r from-purple-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
+                                                    style={{ width: `${progress}%` }}
+                                                />
+                                            </div>
+                                            <div className="text-xs text-gray-400 mt-1">
+                                                {trait.description}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
+
 
                         {/* Honeycomb Status */}
                         <div className="bg-black/30 p-4 rounded-lg border border-yellow-500/30">
