@@ -4,13 +4,10 @@ import { Connection, PublicKey } from '@solana/web3.js';
 // Honeycomb configuration
 export const HONEYCOMB_CONFIG = {
     // Replace with your actual project ID from Honeycomb Dashboard
-    projectId: "your-project-id-here",
+    projectId: process.env.REACT_APP_HONEYCOMB_PROJECT_ID,
     
     // Devnet endpoint
-    rpcUrl: "https://api.devnet.solana.com",
-    
-    // For production, use mainnet
-    // rpcUrl: "https://api.mainnet-beta.solana.com",
+    rpcUrl: process.env.REACT_APP_RPC_URL,
 };
 
 // Initialize Honeycomb client
