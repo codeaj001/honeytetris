@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@honeycomb-protocol/edge-client": "^0.0.7-beta.15",
+    "@project-serum/anchor": "^0.26.0",
     "@solana/wallet-adapter-react": "^0.15.39",
     "@solana/wallet-adapter-react-ui": "^0.9.39",
     "@solana/wallet-adapter-wallets": "^0.19.37",

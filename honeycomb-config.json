@@ -1,0 +1,65 @@
+{
+  "project": {
+    "name": "Chain Tetris",
+    "description": "Blockchain-powered Tetris with persistent progression",
+    "network": "devnet"
+  },
+  "traits": [
+    {
+      "id": "speed_demon",
+      "name": "Speed Demon",
+      "description": "Master of fast gameplay",
+      "maxLevel": 50,
+      "xpPerLevel": 100
+    },
+    {
+      "id": "line_clearer",
+      "name": "Line Clearer",
+      "description": "Expert at clearing lines",
+      "maxLevel": 50,
+      "xpPerLevel": 100
+    },
+    {
+      "id": "perfectionist",
+      "name": "Perfectionist",
+      "description": "Precision and accuracy master",
+      "maxLevel": 50,
+      "xpPerLevel": 100
+    }
+  ],
+  "missions": [
+    {
+      "id": "clear_10_lines",
+      "name": "Line Clearer",
+      "description": "Clear 10 lines in total",
+      "target": 10,
+      "reward": {
+        "type": "trait_xp",
+        "traitId": "speed_demon",
+        "amount": 100
+      }
+    },
+    {
+      "id": "score_5000",
+      "name": "Score Master",
+      "description": "Score 5000 points in a single game",
+      "target": 5000,
+      "reward": {
+        "type": "trait_xp",
+        "traitId": "line_clearer",
+        "amount": 100
+      }
+    },
+    {
+      "id": "reach_level_5",
+      "name": "Level Up",
+      "description": "Reach level 5 in a single game",
+      "target": 5,
+      "reward": {
+        "type": "trait_xp",
+        "traitId": "perfectionist",
+        "amount": 100
+      }
+    }
+  ]
+}

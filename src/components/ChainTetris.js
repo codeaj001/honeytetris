@@ -1,17 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { Play, Pause, RotateCw, Trophy, Target, Zap, Wallet, Loader } from 'lucide-react';
-import {
-    initializeHoneycomb,
-    createPlayerProfile,
-    createMissions,
-    updateMissionProgress,
-    completeMission,
-    getPlayerStats,
-    MISSIONS,
-    TRAITS
-} from '../utils/honeycomb';
+import { Play, Pause, RotateCw, Trophy, Target, Zap, Wallet, Loader, AlertCircle } from 'lucide-react';
+import { honeycombClient } from '../utils/realHoneycomb';
+import { MISSIONS, TRAITS } from '../utils/honeycomb';
 
 // Tetris pieces (same as before)
 const PIECES = {
@@ -57,12 +49,18 @@ const ChainTetris = () => {
     const [isPlaying, setIsPlaying] = useState(false);
 
     // Honeycomb state
-    const [honeycombClient, setHoneycombClient] = useState(null);
+    const [honeycombInitialized, setHoneycombInitialized] = useState(false);
     const [playerProfile, setPlayerProfile] = useState(null);
-    const [playerTraits, setPlayerTraits] = useState({});
+    const [playerTraits, setPlayerTraits] = useState([]);
     const [playerMissions, setPlayerMissions] = useState([]);
     const [isLoadingHoneycomb, setIsLoadingHoneycomb] = useState(false);
     const [honeycombError, setHoneycombError] = useState(null);
+    const [gameStats, setGameStats] = useState({
+        totalLines: 0,
+        tetrisCount: 0,
+        gameScore: 0,
+        gameLevel: 0
+    });
 
     const gameRef = useRef();
     const dropTimeRef = useRef(1000);
@@ -76,27 +74,27 @@ const ChainTetris = () => {
             setHoneycombError(null);
             
             try {
-                console.log('Initializing Honeycomb for wallet:', publicKey.toString());
+                console.log('🍯 Initializing Honeycomb for wallet:', publicKey.toString());
                 
                 // Initialize Honeycomb client
-                const client = await initializeHoneycomb(wallet.adapter);
-                setHoneycombClient(client);
+                await honeycombClient.initialize(wallet.adapter);
                 
                 // Create or get player profile
-                const profile = await createPlayerProfile(client, publicKey);
+                const profile = await honeycombClient.getOrCreatePlayerProfile(publicKey);
                 setPlayerProfile(profile);
                 
-                // Create missions
-                await createMissions(client, publicKey);
+                // Initialize missions
+                const missions = await honeycombClient.initializeMissions();
+                setPlayerMissions(missions);
                 
-                // Load player stats
-                const stats = await getPlayerStats(client, publicKey);
-                setPlayerTraits(stats.traits);
-                setPlayerMissions(stats.missions);
+                // Get traits for UI
+                const traits = honeycombClient.getTraitsForUI();
+                setPlayerTraits(traits);
                 
-                console.log('Honeycomb initialized successfully');
+                setHoneycombInitialized(true);
+                console.log('✅ Honeycomb initialized successfully');
             } catch (error) {
-                console.error('Honeycomb initialization failed:', error);
+                console.error('❌ Honeycomb initialization failed:', error);
                 setHoneycombError(error.message);
             } finally {
                 setIsLoadingHoneycomb(false);
@@ -156,60 +154,68 @@ const ChainTetris = () => {
         return { newBoard, linesCleared };
     }, []);
 
-    // Update Honeycomb progress
+    // Update Honeycomb progress - REAL IMPLEMENTATION
     const updateHoneycombProgress = useCallback(async (linesCleared, currentScore, currentLevel) => {
-        if (!honeycombClient || !connected) return;
+        if (!honeycombInitialized || !connected) return;
 
         try {
-            const totalLines = lines + linesCleared;
+            // Track Tetris (4-line clears)
+            const tetrisBonus = linesCleared === 4 ? 1 : 0;
             
-            // Update mission progress
-            const missionUpdates = [
-                {
-                    missionId: MISSIONS.CLEAR_LINES.id,
-                    progress: totalLines
-                },
-                {
-                    missionId: MISSIONS.HIGH_SCORE.id,
-                    progress: currentScore
-                },
-                {
-                    missionId: MISSIONS.REACH_LEVEL.id,
-                    progress: currentLevel
-                }
-            ];
+            // Update game stats
+            setGameStats(prev => ({
+                totalLines: lines + linesCleared,
+                tetrisCount: prev.tetrisCount + tetrisBonus,
+                gameScore: currentScore,
+                gameLevel: currentLevel
+            }));
 
-            for (const update of missionUpdates) {
-                try {
-                    await updateMissionProgress(honeycombClient, update.missionId, update.progress);
-                    
-                    // Check if mission is completed
-                    const mission = Object.values(MISSIONS).find(m => m.id === update.missionId);
-                    if (mission && update.progress >= mission.target) {
-                        // Complete mission and award XP
-                        let traitId = TRAITS.SPEED_DEMON.id;
-                        if (update.missionId === MISSIONS.HIGH_SCORE.id) {
-                            traitId = TRAITS.LINE_CLEARER.id;
-                        } else if (update.missionId === MISSIONS.REACH_LEVEL.id) {
-                            traitId = TRAITS.PERFECTIONIST.id;
-                        }
-                        
-                        await completeMission(honeycombClient, update.missionId, traitId, 100);
-                    }
-                } catch (error) {
-                    console.error(`Failed to update mission ${update.missionId}:`, error);
+            // Update missions in real-time during gameplay
+            const missions = honeycombClient.getMissions();
+            const updatedMissions = [];
+
+            for (const mission of missions) {
+                let progress = mission.progress;
+                
+                // Update progress based on mission type
+                switch (mission.id) {
+                    case 'daily_lines_10':
+                        progress = lines + linesCleared;
+                        break;
+                    case 'high_score_5000':
+                        progress = currentScore;
+                        break;
+                    case 'level_master_5':
+                        progress = currentLevel;
+                        break;
+                    case 'tetris_master':
+                        progress = gameStats.tetrisCount + tetrisBonus;
+                        break;
                 }
+
+                // Update mission progress
+                if (progress > mission.progress) {
+                    await honeycombClient.updateMissionProgress(mission.id, progress, {
+                        score: currentScore,
+                        level: currentLevel,
+                        totalLines: lines + linesCleared
+                    });
+                }
+                
+                updatedMissions.push({
+                    ...mission,
+                    progress: Math.min(progress, mission.target)
+                });
             }
 
-            // Refresh player stats
-            const stats = await getPlayerStats(honeycombClient, publicKey);
-            setPlayerTraits(stats.traits);
-            setPlayerMissions(stats.missions);
+            // Update UI state
+            setPlayerMissions(updatedMissions);
+            setPlayerTraits(honeycombClient.getTraitsForUI());
             
         } catch (error) {
-            console.error('Failed to update Honeycomb progress:', error);
+            console.error('❌ Failed to update Honeycomb progress:', error);
         }
-    }, [honeycombClient, connected, publicKey, lines]);
+    }, [honeycombInitialized, connected, lines, gameStats]);
 
     // Place piece on board (same as before)
     const placePiece = useCallback((piece, board) => {
@@ -428,10 +434,10 @@ const ChainTetris = () => {
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="text-right text-sm">
-                            <p className="text-gray-400">Connected as:</p>
+                            {/* <p className="text-gray-400">Connected as:</p>
                             <p className="font-mono text-xs text-purple-400">
                                 {publicKey?.toString().slice(0, 8)}...{publicKey?.toString().slice(-8)}
-                            </p>
+                            </p> */}
                         </div>
                         <WalletMultiButton className="!bg-gradient-to-r !from-purple-600/50 !to-blue-600/50 hover:!from-purple-700/50 hover:!to-blue-700/50" />
                     </div>
@@ -525,9 +531,11 @@ const ChainTetris = () => {
                         </div>
                     </div>
 
+                                
+                    
+
                     {/* Side Panel */}
                     <div className="space-y-6">
-                    
                         {/* Next Piece */}
                         <div className="bg-black/30 p-4 rounded-lg border border-blue-500/30">
                             <h3 className="text-lg font-bold mb-3 text-blue-400">Next Piece</h3>
@@ -544,25 +552,6 @@ const ChainTetris = () => {
                                             />
                                         ))
                                     )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Game Stats */}
-                        <div className="bg-black/30 p-4 rounded-lg border border-cyan-500/30">
-                            <h3 className="text-lg font-bold mb-3 text-cyan-400">Game Stats</h3>
-                            <div className="space-y-2">
-                                <div className="flex justify-between">
-                                    <span>Score:</span>
-                                    <span className="font-bold">{score.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Lines:</span>
-                                    <span className="font-bold">{lines}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Level:</span>
-                                    <span className="font-bold">{level}</span>
                                 </div>
                             </div>
                         </div>
@@ -620,6 +609,25 @@ const ChainTetris = () => {
                             </div>
                         </div>
 
+                        {/* Game Stats */}
+                        <div className="bg-black/30 p-4 rounded-lg border border-cyan-500/30">
+                            <h3 className="text-lg font-bold mb-3 text-cyan-400">Game Stats</h3>
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span>Score:</span>
+                                    <span className="font-bold">{score.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Lines:</span>
+                                    <span className="font-bold">{lines}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Level:</span>
+                                    <span className="font-bold">{level}</span>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Player Traits (Honeycomb) */}
                         <div className="bg-black/30 p-4 rounded-lg border border-purple-500/30">
                             <h3 className="text-lg font-bold mb-3 text-purple-400 flex items-center gap-2">
@@ -657,6 +665,8 @@ const ChainTetris = () => {
                                 })}
                             </div>
                         </div>
+
+                        
 
 
                         {/* Honeycomb Status */}
